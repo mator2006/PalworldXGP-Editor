@@ -1,0 +1,7 @@
+2026-10-15 08:50:31 [INFO] Palworld-Save-Editor
+2026-10-15 08:50:31 [INFO] Opening D:\codes\palu_edit\test_save\Level.sav
+2026-10-15 08:50:31 [INFO] Decompressing sav
+2026-10-15 08:50:31 [ERROR] Caught Exception: palworld_save_tools::palsav::decompress_sav_to_gvas: Unknown save format
+2026-10-15 08:50:31 [INFO] [94;20m> Please provide the path to the dir containing Level.sav[0m
+2026-10-15 08:50:31 [WARNING] EOF when reading a line
+2026-10-15 08:50:31 [INFO] Palworld-Save-Editor

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+palx_exports/
+palx_wgs_backups/
+palx_wgs_workspaces/
+
+*.sav
+*.sav.json
