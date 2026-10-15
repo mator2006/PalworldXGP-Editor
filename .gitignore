@@ -7,3 +7,5 @@ palx_wgs_workspaces/
 
 *.sav
 *.sav.json
+palworld_pal_editor/logs/
+tools/__pycache__/

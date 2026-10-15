@@ -77,10 +77,7 @@ PalworldXGP-Editor/
 ├── ooz.pyd              Oodle 解压依赖
 ├── palworld_pal_editor/ 内核（GPL-3.0，见 LICENSE-THIRDPARTY.md）
 ├── palworld_save_tools/
-├── tools/                 辅助工具（汇总、最新存档详情、导出校验）
-├── palx_exports/           默认导出副本目录
-├── palx_wgs_backups/       直写前的自动备份
-└── palx_wgs_workspaces/    临时工作区（可删）
+└── tools/                 辅助工具（汇总、最新存档详情、导出校验）
 ```
 
 ### 运行要求
@@ -175,10 +172,7 @@ PalworldXGP-Editor/
 ├── ooz.pyd              Oodle decompression dependency
 ├── palworld_pal_editor/ core library (GPL-3.0, see LICENSE-THIRDPARTY.md)
 ├── palworld_save_tools/
-├── tools/                 helper tools (summary, latest save details, verification)
-├── palx_exports/           default export-copy directory
-├── palx_wgs_backups/       automatic backups before in-place writes
-└── palx_wgs_workspaces/    temp workspaces (safe to delete)
+└── tools/                 helper tools (summary, latest save details, verification)
 ```
 
 ### Requirements
