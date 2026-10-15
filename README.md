@@ -46,6 +46,9 @@ palx edit --level 80 --tech-points 9999 --write
 
 :: 自动化跳过交互确认
 palx edit --level 80 --write --yes
+
+:: 给玩家放物品（默认导出副本）
+palx item --item AIcore --count 999 --world AFACF0A3
 ```
 
 参数说明：
@@ -54,6 +57,8 @@ palx edit --level 80 --write --yes
 - `--slot main|1|2|3`：存档槽位（默认 main）
 - `--player-name <昵称>`：多玩家时指定目标（默认第一个玩家）
 - `--level / --tech-points / --nickname`：要修改的字段，可同时使用
+- `--item <物品ID>`、`--count <数量>`、`--container-slot <槽位>`：`item` 子命令参数，
+  用于向玩家通用仓库放物品（默认第一个空槽，数量 1-999999）
 - `--root <路径>`：手动指定 wgs 目录（默认自动检测）
 
 ### 输出说明
@@ -72,7 +77,7 @@ PalworldXGP-Editor/
 ├── ooz.pyd              Oodle 解压依赖
 ├── palworld_pal_editor/ 内核（GPL-3.0，见 LICENSE-THIRDPARTY.md）
 ├── palworld_save_tools/
-├── tools/verify_export.py  校验导出副本的小工具
+├── tools/                 辅助工具（汇总、最新存档详情、导出校验）
 ├── palx_exports/           默认导出副本目录
 ├── palx_wgs_backups/       直写前的自动备份
 └── palx_wgs_workspaces/    临时工作区（可删）
@@ -136,6 +141,9 @@ palx edit --level 80 --tech-points 9999 --write
 
 :: Skip interactive confirmation for automation
 palx edit --level 80 --write --yes
+
+:: Give items to a player's common container (default: export copy)
+palx item --item AIcore --count 999 --world AFACF0A3
 ```
 
 Options:
@@ -144,6 +152,9 @@ Options:
 - `--slot main|1|2|3`: save slot (default: main)
 - `--player-name <name>`: target a specific player (default: first player)
 - `--level / --tech-points / --nickname`: fields to edit, can be combined
+- `--item <id>`, `--count <n>`, `--container-slot <slot>`: `item` subcommand
+  options for placing items into a player's common container (first free slot
+  by default, count 1-999999)
 - `--root <path>`: manual wgs directory (auto-detected by default)
 
 ### Output notes
@@ -164,7 +175,7 @@ PalworldXGP-Editor/
 ├── ooz.pyd              Oodle decompression dependency
 ├── palworld_pal_editor/ core library (GPL-3.0, see LICENSE-THIRDPARTY.md)
 ├── palworld_save_tools/
-├── tools/verify_export.py  export verification helper
+├── tools/                 helper tools (summary, latest save details, verification)
 ├── palx_exports/           default export-copy directory
 ├── palx_wgs_backups/       automatic backups before in-place writes
 └── palx_wgs_workspaces/    temp workspaces (safe to delete)

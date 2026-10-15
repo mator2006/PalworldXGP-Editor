@@ -13,7 +13,6 @@ import hashlib
 import json
 import datetime
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -129,6 +128,130 @@ def cmd_info(args) -> None:
             "guilds": qs.guilds(),
         }
         print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    finally:
+        session.close()
+
+
+def cmd_item(args) -> None:
+    """Give items to a player's common container (default: export copy)."""
+    if args.count is not None and not (1 <= args.count <= 999999):
+        raise SystemExit("error: --count must be between 1 and 999999")
+    root = Path(args.root)
+    catalog, sources = discover_sources(root)
+    source = pick_source(sources, args.world, args.slot)
+    print(f"[palx] opening: {source.display_name} ({source.world_id})")
+    adapter = make_adapter(catalog, root)
+    session = SaveSession.open_storage(source, adapter)
+    try:
+        from palworld_pal_editor.application.inventory_editor import InventoryEditor
+        from palworld_pal_editor.domain.commands import PutItem
+        from palworld_pal_editor.domain.models import ItemContainerType
+
+        players = list(session.manager.get_players())
+        if not players:
+            raise SystemExit("error: no players found in this save")
+        if args.player_name:
+            matches = [p for p in players if p.NickName == args.player_name]
+            if not matches:
+                raise SystemExit(
+                    f"error: player not found. known: "
+                    f"{', '.join(sorted({str(p.NickName) for p in players}))}"
+                )
+            player = matches[0]
+        else:
+            player = players[0]
+
+        inv = InventoryEditor(session).get_inventory(str(player.PlayerUId))
+        container = next(
+            (c for c in inv.containers if c.container_type == ItemContainerType.COMMON),
+            None,
+        )
+        if container is None:
+            raise SystemExit("error: common container not found")
+        slot_index = args.container_slot
+        if slot_index is None:
+            free = [s.slot_index for s in container.slots if s.state == "empty"]
+            if not free:
+                raise SystemExit("error: common container is full")
+            slot_index = free[0]
+        else:
+            occupied = {
+                s.slot_index for s in container.slots if s.state != "empty"
+            }
+            if slot_index in occupied:
+                raise SystemExit(
+                    f"error: common slot {slot_index} is occupied (use a free slot)"
+                )
+
+        command = PutItem(
+            session_id=session.session_id,
+            expected_revision=session.revision,
+            player_id=str(player.PlayerUId),
+            container_type=ItemContainerType.COMMON,
+            slot_index=slot_index,
+            static_id=args.item,
+            count=args.count,
+            mode="empty_only",
+        )
+        InventoryEditor(session).execute(command)
+
+        if not args.write:
+            base_dir = Path(args.out) if args.out else APP_DIR / "palx_exports"
+            out_dir = base_dir / (
+                datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                + f"_{(source.world_id or 'world')[:8]}"
+            )
+            out_dir.mkdir(parents=True, exist_ok=True)
+            export_files = sorted(
+                {"Level.sav", f"Players/{UUID2HexStr(player.PlayerUId)}.sav"}
+            )
+            SaveWriter()._serialize_to_staging(session, out_dir, export_files)
+            manifest = {
+                "created_at": datetime.datetime.now().astimezone().isoformat(),
+                "source_world": source.world_id,
+                "source_display": source.display_name,
+                "player": str(player.PlayerUId),
+                "edits": {"put_item": args.item, "count": args.count, "slot": slot_index},
+                "files": [],
+                "note": "export copy; original XGP save was NOT modified",
+            }
+            for rel in export_files:
+                data = (out_dir / rel).read_bytes()
+                manifest["files"].append(
+                    {"path": rel, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                )
+            (out_dir / "palx_manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            result = {"ok": True, "mode": "export-copy", "export_dir": str(out_dir)}
+        else:
+            if not args.yes:
+                print(
+                    f"WARNING: this will OVERWRITE the original XGP save: "
+                    f"{source.display_name} ({source.world_id})"
+                )
+                a = input("Confirm overwrite [type YES]: ").strip()
+                b = input("Second confirmation [type YES]: ").strip()
+                if a != "YES" or b != "YES":
+                    raise SystemExit("aborted: not confirmed (original save untouched)")
+            saved = SaveWriter().save(session, None, session.revision)
+            result = {
+                "ok": True,
+                "mode": "in-place",
+                "backup": saved.backup_path,
+                "written_files": list(saved.written_files),
+                "cloud_sync_verified": saved.cloud_sync_verified,
+            }
+        result.update(
+            {
+                "world": source.world_id,
+                "player": str(player.PlayerUId),
+                "item": args.item,
+                "count": args.count,
+                "slot": slot_index,
+            }
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     finally:
         session.close()
 
@@ -360,6 +483,30 @@ def main() -> None:
     p_info.add_argument("--slot", choices=["main", "1", "2", "3"], default="main")
     p_info.add_argument("--player-name", help="filter to a single player nickname")
     p_info.set_defaults(func=cmd_info)
+
+    p_item = sub.add_parser(
+        "item",
+        help="add items into a player's common container (default: export copy)",
+        parents=[common],
+    )
+    p_item.add_argument("--item", required=True, help="item static id (e.g. AIcore)")
+    p_item.add_argument("--count", type=int, required=True, help="stack count (1-999999)")
+    p_item.add_argument("--world", help="world id prefix, default: latest")
+    p_item.add_argument("--slot", choices=["main", "1", "2", "3"], default="main")
+    p_item.add_argument(
+        "--container-slot",
+        type=int,
+        help="common container slot (default: first empty)",
+    )
+    p_item.add_argument("--player-name", help="player nickname (default: first player)")
+    p_item.add_argument(
+        "--write",
+        action="store_true",
+        help="write into the ORIGINAL XGP save (requires double confirmation)",
+    )
+    p_item.add_argument("--yes", action="store_true", help="skip confirmation")
+    p_item.add_argument("--out", help="export directory for copy mode")
+    p_item.set_defaults(func=cmd_item)
 
     p_edit = sub.add_parser("edit", help="edit a save automatically", parents=[common])
     p_edit.add_argument("--world", help="world id prefix (first hex chars), default: latest")
